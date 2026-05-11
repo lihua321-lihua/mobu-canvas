@@ -1,0 +1,26 @@
+# ========================
+# 后端 (FastAPI & AI Engine)
+# ========================
+backend/.env
+backend/temp_inputs/
+backend/__pycache__/
+backend/*.py[cod]
+backend/*$py.class
+backend/venv/
+backend/env/
+backend/.venv/
+
+# ========================
+# 前端 (Vue3 + Vite)
+# ========================
+frontend/node_modules/
+frontend/dist/
+frontend/dist-ssr/
+frontend/*.local
+
+# ========================
+# 全局 IDE 配置文件
+# ========================
+.idea/
+.vscode/
+.DS_Store
