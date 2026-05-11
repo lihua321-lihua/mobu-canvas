@@ -1,142 +1,84 @@
-# 墨步-AI画布
+# 墨步 (MoBu) - 可控式AI绘画伴侣
 
-**—— 源代码与本地部署运行指南**
+> [cite_start]步步随心，画由意动。墨步是一个基于网关分离式微服务架构的智能调度画板系统，彻底剥离了核心业务逻辑与深度学习计算引擎 [cite: 32, 146]。
 
-尊敬的评委老师，您好！感谢您评审本项目。
+## 🌟 项目简介
 
-为了保障极高的运行稳定性和渲染性能，墨步采用了完全解耦的**前后端分离微服务架构**。系统由三个独立运行的节点组成：**前端渲染层 (Vue 3)**、**业务调度网关 (FastAPI)** 以及 **纯计算引擎 (ComfyUI)**。
+[cite_start]墨步 (MoBu) 提供了一个由前端画板与底层 AI 引擎组成的闭环工作流 [cite: 146][cite_start]。本项目致力于解决传统 AI 生图不可控、等待时间长等痛点。前端采用极致简约的 UI 设计与 Figma 级的双层网格工作区 [cite: 29, 43][cite_start]；后端作为智能调度网关，负责多态任务分发、长连接维持以及系统级稳定性防御 [cite: 147]。
 
-根据竞赛规则，本源码包仅包含团队**100% 自主研发**的前端源码与后端网关源码。底层开源生图引擎及模型资产，请按照本文档引导配置。
+本仓库采用 Monorepo 结构，包含完整的独立前端工作站与后端网关服务。
 
-------
+## 🚀 核心特性
 
-## 1. 基础环境与硬件要求
+* **⚡ 长短结合的通信架构**
+  * [cite_start]**Axios 指令下发**：用于“一呼一应”的短耗时任务，如大模型提示词润色与重量级生图任务的派发 [cite: 4, 5, 8, 11]。
+  * [cite_start]**SSE 实时流式追踪**：使用原生 EventSource 建立 Server-Sent Events 单向流长连接，彻底替代低效轮询，实现生图进度的实时反馈与多图层结果接收 [cite: 12, 13, 16, 21]。
+* **🎨 递进式多态生图引擎**
+  * [cite_start]**构思线稿 (Sketch Mode)**：结合 Counterfeit-V3.0 与 Lineart 控制网，并在提示词中暴力镇压实体画板幻觉，将涂鸦转化为纯粹单色线稿 [cite: 160, 162, 163, 164]。
+  * [cite_start]**氛围铺色 (Color Mode)**：采用双通道控制网 (Dual ControlNets)，通道 A 锁死线稿物理边界，通道 B 读取前端涂抹色块精确引导大模型填色 [cite: 165, 168, 169, 170]。
+  * [cite_start]**局部精修 (Inpaint Mode)**：支持用户擦除局部，后端锁死重绘幅度 (denoise = 0.75) 实现掩码重绘与无缝融合 [cite: 171, 172, 174]。
+* **🛠️ 沉浸式前端画板工作站**
+  * [cite_start]包含撤销重做流、物理图层管理、多重混合模式 (如正片叠底、滤色) [cite: 46, 47, 82]。
+  * [cite_start]支持柳叶毛笔 (基于 perfect-freehand 算法)、几何拖拽、物理擦薄橡皮擦、跨域吸色等专业级绘图工具 [cite: 60, 63, 68, 72]。
+* **🛡️ 生产级后端防御体系**
+  * [cite_start]**幽灵连接熔断**：监测前端异常断开，强制闭合底层 WebSocket 避免死循环 [cite: 177, 178]。
+  * [cite_start]**缓存命中假死防御**：捕获引擎 `execution_cached` 状态，主动轮询捞图，防止前端进度条永久卡死 [cite: 179, 180]。
+  * [cite_start]**磁盘 GC 自动回收**：利用 FastAPI BackgroundTasks 异步删除临时入参 Base64 物理落盘文件，防止 I/O 爆炸 [cite: 181, 182]。
+  * [cite_start]**跨域安全护盾**：配置宽松 CORSMiddleware 结合前端 `crossOrigin="anonymous"` 声明，杜绝 Tainted Canvas 污染 [cite: 183, 184]。
 
-为保障“构思 -> 铺色 -> 精修”全工作流顺畅运行，请确保测试设备满足以下要求：
+## 🛠️ 技术栈 (Tech Stack)
 
-- **硬件要求**：推荐配备 NVIDIA 独立显卡，**最低显存要求 8GB (VRAM)**。
-- **前端环境**：Node.js 大于等于 20.19.0 或 大于等于 22.12.0。
-- **后端环境**：Python 3.10 或更高版本。
-- **浏览器**：推荐使用最新版 Chrome 或 Edge 以获得最佳的 Canvas 硬件加速渲染性能。
+### 前端 (Frontend)
+* [cite_start]**核心框架**: Vue 3 + Vite [cite: 3, 143]
+* [cite_start]**状态中枢**: Pinia [cite: 3]
+* [cite_start]**2D 渲染引擎**: vue-konva [cite: 3]
+* [cite_start]**UI 组件库**: Element Plus [cite: 3]
+* [cite_start]**通信**: Axios + 原生 EventSource (SSE) [cite: 3]
 
-------
+### 后端 (Backend API Gateway)
+* [cite_start]**核心框架**: FastAPI (Python 3.10+) + Pydantic [cite: 147, 151]
+* [cite_start]**流式通信**: sse-starlette + websockets [cite: 151]
+* [cite_start]**LLM 代理**: ZhipuAI SDK (GLM-4-Flash) [cite: 149, 151]
+* [cite_start]**底层计算节点**: ComfyUI (HTTP/WebSocket API) [cite: 148]
 
-## 2. 部署节点一：开源生图计算引擎 (ComfyUI)
+## 📂 目录结构
 
-本项目底层核心算力依赖开源计算节点 ComfyUI，请务必先启动此节点。
+```text
+MoBu-AI-Platform/
+├── frontend/                 # 前端画板工程目录
+│   ├── src/
+│   │   ├── components/       # 核心画板与 AI 功能组件
+│   │   ├── composables/      # AI 生成与提示词优化逻辑封装
+│   │   ├── stores/           # Pinia 全局状态管理
+│   │   └── views/            # 路由视图
+│   └── package.json
+├── backend/                  # 后端调度网关目录
+│   ├── app/
+│   │   ├── api/v1/           # LLM 提示词润色、生图网关与 SSE 路由
+│   │   ├── models/           # Pydantic 数据契约
+│   │   └── utils/            # Base64 编解码与工作流篡改器
+│   ├── workflows/            # 标准化 ComfyUI API 工作流卷轴
+│   └── requirements.txt
+└── README.md
+## ⚙️ 本地运行指南
+1. 启动后端网关
+请确保已配置好 Python 3.10+ 环境，并拥有智谱 AI 的 API Key 与本地运行的 ComfyUI 引擎。
 
-### 2.1 获取源码与配置 Python 虚拟环境
-
-请在本地新建一个目录，将 ComfyUI 拉取到本地并隔离环境：
-
-```bash
-# 1. 克隆开源仓库
-git clone https://github.com/comfyanonymous/ComfyUI.git
-cd ComfyUI
-
-# 2. 创建并激活 Python 虚拟环境
-python -m venv venv
-# Windows 激活命令：
-.\venv\Scripts\activate
-# (Mac/Linux 激活命令：source venv/bin/activate)
-
-# 3. 安装核心依赖包
-pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
+Bash
+cd backend
+# 安装依赖
 pip install -r requirements.txt
-```
+# 配置环境变量 (在根目录新建 .env 文件并填入 ZHIPU_API_KEY 与 COMFYUI_URL)
+# 启动 FastAPI 服务
+uvicorn app.main:app --reload
+2. 启动前端画板
+请确保已安装 Node.js 环境。
 
-### 2.2 下载并配置开源模型资产
-
-请通过下方官方 HuggingFace 链接下载对应的开源模型权重，并严格放入 ComfyUI 的对应文件夹中：
-
-**A. 大模型 (Checkpoints)** -> 放入 `ComfyUI/models/checkpoints/` 目录：
-
-1. **Counterfeit-V3.0** (提供二次元精细画风基底)
-   - 下载地址: [HuggingFace - Counterfeit-V3.0.safetensors](https://www.google.com/search?q=https://huggingface.co/gsdf/Counterfeit-V3.0/resolve/main/Counterfeit-V3.0_fp16.safetensors)
-2. **Counterfeit-V3.0-inpainting** (特化重绘模型)
-   - 下载地址: [HuggingFace - Counterfeit-V3.0-inpainting.safetensors](https://www.google.com/search?q=https://huggingface.co/gsdf/Counterfeit-V3.0/resolve/main/Counterfeit-V3.0-inpainting.safetensors)
-
-**B. 控制网模型 (ControlNet)** -> 放入 `ComfyUI/models/controlnet/` 目录：
-
-1. **Lineart** (线稿提取与骨架锁死)
-   - 下载地址: [HuggingFace - control_v11p_sd15_lineart.pth](https://www.google.com/search?q=https://huggingface.co/lllyasviel/ControlNet-v1-1/resolve/main/control_v11p_sd15_lineart.pth)
-2. **T2I-Adapter Color** (色彩引导与色块融合)
-   - 下载地址: [HuggingFace - t2i-adapter-color.pth](https://www.google.com/search?q=https://huggingface.co/TencentARC/T2I-Adapter/resolve/main/models/t2i-adapter-color-sd14v1.pth)
-
-### 2.3 跨域启动引擎
-
-确保处于 `venv` 虚拟环境中，执行以下命令启动 ComfyUI。
-
-⚠️ **极其重要**：由于本项目为严格的前后端分离架构，**必须携带跨域参数**启动，否则前端画布将无法与引擎建立通信：
-
-```bash
-python main.py --enable-cors-header "*"
-```
-
-- **验证**：请确保控制台输出引擎成功运行在 `http://127.0.0.1:8188`。
-
-------
-
-##  3. 部署节点二：业务调度网关 (FastAPI - 自研)
-
-此服务为团队自主研发的核心调度网关，负责多态任务分发、长连接维持与大语言模型 (LLM) 代理。
-
-1. 进入后端源码目录 `mobu-backend`。
-
-2. 同样建议您在此目录下创建独立的虚拟环境，并安装依赖：
-
-   ```bash
-   python -m venv venv
-   .\venv\Scripts\activate
-   pip install -r requirements.txt
-   ```
-
-3. **🔑 API 密钥配置 (免配置特权)**：
-
-   为方便评委测试，我们在项目根目录的 `.env` 文件中，**已经为您预置了具有充足测试额度的 `ZHIPU_API_KEY`**。您无需自行注册申请，可直接开箱体验“智能提示词润色”等功能。
-
-4. 启动后端网关服务：
-
-   ```bash
-   # 请直接执行团队编写的批处理启动脚本：
-   .\run.bat
-   ```
-
-- **验证**：请确保后端网关服务成功运行在 `http://127.0.0.1:8000`。
-
-------
-
-## 4. 部署节点三：前端交互画板 (Vue 3 - 自研)
-
-此服务为团队自主研发的客户端界面，承载所有的非破坏性画布交互、图层流转与状态管理。
-
-1. 进入前端源码目录 `mobu-frontend`。
-
-2. 安装 Node 依赖：
-
-   ```bash
-   npm install
-   ```
-
-3. 启动本地开发服务器：
-
-   ```bash
-   npm run dev
-   ```
-
-4. 终端将输出本地访问地址（通常为 `http://localhost:5173` 或 `http://localhost:5174`）。在浏览器中打开该地址，即可开始体验墨步 (MoBu) 艺术画布！
-
-5. 测试账号和密码：
-   测试账号：19000000000
-
-   测试密码：123456
-
-
-------
-
-## 5. 架构说明与未来演进计划 (关于“伴生智能体”)
-
-您在体验过程中，会注意到右侧控制台中设计了创新的**“伴生智能”交互面板**。
-
-- **当前成果**：前端“双态协同右脑引擎”的 UI/UX、云水行文排版、以及核心的跨组件状态调度（Pinia Dispatcher 拦截机制）已 **100% 自主开发完毕**，您可以完美体验其人机交互的视觉与业务逻辑。
-- **未来演进**：底层的 `openclaw` 智能体框架，目前规划为作为一个**独立的第三方微服务**运行，用于实现真正的“意图识别与参数自动代填”。由于其涉及复杂的意图对齐算法，目前尚处于实验室调优阶段，本次提交包暂不包含该独立第三方服务的逻辑代码。这亦是本项目未来的核心商业演进方向。
+Bash
+cd frontend
+# 安装依赖
+npm install
+# 启动本地开发服务器
+npm run dev
+## 🤝 团队协作与版权
+本项目作为团队联合开发项目，已规划并支持完整的软著提取规范 。代码核心保留了多端拓展性，未来计划向移动端跨平台演进。
